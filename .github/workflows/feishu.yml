@@ -1,0 +1,13 @@
+name: Notify Feishu
+on: push
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send to Feishu
+        env:
+          WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          MSG: "GitHub: ${{ github.actor }} 推送到 ${{ github.repository }}@${{ github.ref_name }}：${{ github.event.head_commit.message }}"
+        run: |
+          jq -n --arg t "$MSG" '{msg_type:"text",content:{text:$t}}' \
+          | curl -s -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK"
