@@ -1,0 +1,21 @@
+name: Trending to Feishu
+on:
+  schedule:
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+jobs:
+  trending:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch and send
+        env:
+          WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SINCE=$(date -u -d '7 days ago' +%Y-%m-%d)
+          gh api -X GET search/repositories \
+            -f q="created:>$SINCE" -f sort=stars -f order=desc -f per_page=10 \
+            --jq '.items[] | "⭐\(.stargazers_count) \(.full_name)\n\(.description // "无描述")\n\(.html_url)\n"' > list.txt
+          { echo "GitHub 本周爆火新仓库 TOP10"; echo; cat list.txt; } > msg.txt
+          jq -n --rawfile t msg.txt '{msg_type:"text",content:{text:$t}}' \
+            | curl -s -X POST -H "Content-Type: application/json" -d @- "$WEBHOOK"
